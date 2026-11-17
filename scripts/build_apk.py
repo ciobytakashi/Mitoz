@@ -186,7 +186,6 @@ import java.util.ArrayList;
 public class MainActivity extends Activity {{
 
     private static final int FILE_CHOOSER_REQUEST = 1001;
-
     private ValueCallback<Uri[]> filePathCallback;
 
     @Override
@@ -199,7 +198,6 @@ public class MainActivity extends Activity {{
         s.setJavaScriptEnabled(
             {str(bool(CFG.get('allow_javascript', True))).lower()}
         );
-
         s.setDomStorageEnabled(true);
         s.setAllowFileAccess(true);
         s.setAllowContentAccess(true);
@@ -220,15 +218,10 @@ public class MainActivity extends Activity {{
                 filePathCallback = callback;
 
                 try {{
-                    Intent intent = new Intent(
-                        Intent.ACTION_OPEN_DOCUMENT
-                    );
-
+                    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                     intent.addCategory(Intent.CATEGORY_OPENABLE);
                     intent.setType("*/*");
-                    intent.addFlags(
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    );
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
                     String[] types = params.getAcceptTypes();
                     ArrayList<String> mimeTypes = new ArrayList<>();
@@ -250,15 +243,10 @@ public class MainActivity extends Activity {{
 
                     intent.putExtra(
                         Intent.EXTRA_ALLOW_MULTIPLE,
-                        params.getMode()
-                            == FileChooserParams.MODE_OPEN_MULTIPLE
+                        params.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE
                     );
 
-                    startActivityForResult(
-                        intent,
-                        FILE_CHOOSER_REQUEST
-                    );
-
+                    startActivityForResult(intent, FILE_CHOOSER_REQUEST);
                     return true;
 
                 }} catch (Exception e) {{
@@ -270,7 +258,6 @@ public class MainActivity extends Activity {{
         }});
 
         setContentView(w);
-
         w.loadUrl(
             "file:///android_asset/site/{CFG.get('web_entry', 'index.html')}"
         );
@@ -285,9 +272,7 @@ public class MainActivity extends Activity {{
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == FILE_CHOOSER_REQUEST) {{
-            if (filePathCallback == null) {{
-                return;
-            }}
+            if (filePathCallback == null) return;
 
             Uri[] results = null;
 
@@ -297,10 +282,8 @@ public class MainActivity extends Activity {{
                     results = new Uri[count];
 
                     for (int i = 0; i < count; i++) {{
-                        results[i] = data.getClipData()
-                            .getItemAt(i).getUri();
+                        results[i] = data.getClipData().getItemAt(i).getUri();
                     }}
-
                 }} else if (data.getData() != null) {{
                     results = new Uri[] {{ data.getData() }};
                 }}
@@ -314,7 +297,6 @@ public class MainActivity extends Activity {{
 """
 
     (java_dir / "MainActivity.java").write_text(java_code)
-
     return project
 
 
@@ -322,15 +304,16 @@ def main():
     BUILD.mkdir(parents=True, exist_ok=True)
     OUTPUT.mkdir(parents=True, exist_ok=True)
 
-    zips = (
-        sorted((REPO / "input").glob("*.zip"))
-        if (REPO / "input").exists()
-        else []
-    )
+    input_dir = REPO / "input"
+    source = input_dir / "app.zip"
 
-    if not zips:
+    if not source.is_file():
+        available = sorted(p.name for p in input_dir.glob("*.zip"))
         raise RuntimeError(
-            "No ZIP found. Upload one project ZIP into input/ and commit it."
+            "Build input not found: input/app.zip. "
+            "Rename the ZIP you want to build to app.zip. "
+            "Other ZIP files are kept untouched. "
+            "Available ZIP files: " + ", ".join(available)
         )
 
     if EXTRACT.exists():
@@ -338,33 +321,22 @@ def main():
 
     EXTRACT.mkdir(parents=True)
 
-    source = zips[-1]
-    print("Extracting", source)
-
+    print("Selected build input:", source)
     extract_safe(source, EXTRACT)
 
     android = find_android(EXTRACT)
 
     if android:
         print("Detected Android Gradle source project:", android)
-
         gradlew = android / "gradlew"
 
         if gradlew.exists():
             gradlew.chmod(0o755)
-            run(
-                [str(gradlew), "--no-daemon", ":app:assembleDebug"],
-                android
-            )
+            run([str(gradlew), "--no-daemon", ":app:assembleDebug"], android)
         else:
-            run(
-                ["gradle", "--no-daemon", ":app:assembleDebug"],
-                android
-            )
+            run(["gradle", "--no-daemon", ":app:assembleDebug"], android)
 
-        candidates = list(
-            android.rglob("build/outputs/apk/debug/*.apk")
-        )
+        candidates = list(android.rglob("build/outputs/apk/debug/*.apk"))
 
         if not candidates:
             raise RuntimeError(
@@ -378,34 +350,19 @@ def main():
         print("Detected website/HTML project:", site)
 
         project = make_webview_shell(site)
+        run(["gradle", "--no-daemon", "assembleDebug"], project)
 
-        run(
-            ["gradle", "--no-daemon", "assembleDebug"],
-            project
-        )
-
-        apk = (
-            project
-            / "app/build/outputs/apk/debug/app-debug.apk"
-        )
+        apk = project / "app/build/outputs/apk/debug/app-debug.apk"
 
         if not apk.exists():
             raise RuntimeError(
                 "WebView build ran but app-debug.apk was not produced."
             )
 
-    dest = OUTPUT / (
-        APP_NAME.replace(" ", "-") + "-debug.apk"
-    )
-
+    dest = OUTPUT / (APP_NAME.replace(" ", "-") + "-debug.apk")
     shutil.copy2(apk, dest)
 
-    print(
-        "APK_READY:",
-        dest,
-        dest.stat().st_size,
-        "bytes"
-    )
+    print("APK_READY:", dest, dest.stat().st_size, "bytes")
 
 
 if __name__ == "__main__":
