@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101112">
+<title>MITOS APK Shell</title>
+<style>
+:root{color-scheme:dark;--bg:#0d0f10;--panel:#171a1c;--panel2:#202427;--line:#303639;--muted:#9ba4a8;--text:#f3f5f5;--white:#fff;--accent:#e7ecee;--ok:#8ed5a5;--bad:#ff9292;--warn:#f2cd80}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+button,input,select{font:inherit}button{border:1px solid var(--line);border-radius:11px;padding:11px 14px;background:#292e31;color:var(--text);font-weight:650;cursor:pointer}button.primary{background:#f0f2f3;color:#101314;border-color:#f0f2f3}button:disabled{opacity:.45;cursor:not-allowed}input,select{width:100%;background:#101314;border:1px solid #394145;border-radius:10px;padding:12px;color:var(--text);outline:none}input:focus,select:focus{border-color:#aeb8bd}label{display:block;color:#c4cbce;font-size:13px;font-weight:650;margin:0 0 6px}.muted{color:var(--muted)}.small{font-size:12px}.wrap{max-width:920px;margin:auto;padding:0 16px 110px}
+header{padding:calc(18px + env(safe-area-inset-top)) 0 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:11px}.logo{width:38px;height:38px;border:1px solid #687176;border-radius:12px;display:grid;place-items:center;font-weight:900;letter-spacing:-1px;background:#202427}.brand strong{font-size:16px;letter-spacing:.08em}.brand small{display:block;color:var(--muted);font-size:11px;letter-spacing:.12em}
+.status-pill{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:5px 9px}
+h1{font-size:26px;line-height:1.2;margin:8px 0}h2{font-size:17px;margin:0 0 12px}p{margin:7px 0 12px}.intro{color:var(--muted);font-size:13px;margin-bottom:18px}
+.tabs{display:flex;gap:7px;overflow:auto;padding:3px 0 13px;margin-bottom:8px}.tab{white-space:nowrap;background:transparent;color:var(--muted);padding:9px 12px}.tab.active{background:#e9edef;color:#111516;border-color:#e9edef}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin:12px 0}.panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{margin:12px 0}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.actions button{flex:1}.drop{border:1px dashed #657075;border-radius:14px;padding:18px;text-align:center;background:#121516}.drop input{display:none}.drop strong{display:block;margin-bottom:5px}.metric{background:#111516;border:1px solid var(--line);border-radius:12px;padding:12px}.metric b{display:block;font-size:21px}.metric span{font-size:11px;color:var(--muted)}
+.notice{border-radius:11px;padding:11px 12px;background:#22272a;color:#cbd2d5;font-size:12px;margin:12px 0}.notice.warn{border-left:3px solid var(--warn)}.notice.ok{border-left:3px solid var(--ok)}.notice.error{border-left:3px solid var(--bad)}
+.status{font-size:12px;padding:4px 8px;border-radius:99px;background:#292f32;color:#d3dadd}.status.success{color:var(--ok)}.status.failure{color:var(--bad)}
+.item{border-top:1px solid var(--line);padding:12px 0}.item:first-child{border-top:0}.item-title{font-weight:700;overflow-wrap:anywhere}.item-meta{font-size:12px;color:var(--muted);margin-top:3px}.item-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.hidden{display:none!important}.right{margin-left:auto}.spinner{display:inline-block;width:13px;height:13px;border:2px solid #666;border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px}@keyframes spin{to{transform:rotate(360deg)}}
+footer{text-align:center;color:#687276;font-size:11px;padding:24px 0}.mono{font-family:ui-monospace,SFMono-Regular,monospace;overflow-wrap:anywhere}
+@media(max-width:560px){.grid{grid-template-columns:1fr}.wrap{padding-left:13px;padding-right:13px}h1{font-size:23px}.panel{padding:14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><div class="brand"><div class="logo">M</div><div><strong>MITOS</strong><small>APK SHELL</small></div></div><span class="status-pill" id="connectionBadge">NOT CONNECTED</span></header>
+<section>
+<h1>Project to APK</h1>
+<p class="intro">Upload a project archive, launch your existing GitHub Actions build, and retrieve its APK artifact.</p>
+</section>
+<nav class="tabs" aria-label="Main navigation">
+<button class="tab active" data-tab="build">Build</button><button class="tab" data-tab="runs">Build history</button><button class="tab" data-tab="settings">Settings</button>
+</nav>
+<main>
+<section id="tab-build">
+<div class="panel">
+<div class="panel-head"><h2>New build</h2><span class="status" id="projectType">NO PROJECT</span></div>
+<p class="muted small">Supported by the existing builder: website projects and Android Gradle projects.</p>
+<div class="drop" id="dropZone"><strong id="fileTitle">Choose project ZIP</strong><span class="muted small" id="fileHelp">Tap to select a .zip file from your Android device</span><input type="file" id="zipFile" accept=".zip,application/zip"></div>
+<div id="validation" class="notice hidden" role="status"></div>
+<div class="field"><label>GitHub build input</label><input value="input/app.zip (replaced automatically for each build)" disabled></div>
+<div class="field"><label for="appName">Application name</label><input id="appName" value="MITOS" maxlength="40"><div class="small muted">This becomes the installed app name.</div></div>
+<div class="field"><label for="packageId">Android package ID</label><input id="packageId" value="com.mitos.app" maxlength="180"><div class="small muted">Use a unique ID such as com.company.myapp.</div></div>
+<div class="actions"><button class="primary" id="uploadBuild" disabled>Upload ZIP &amp; start build</button><button id="clearFile">Clear</button></div>
+<div id="buildMessage" class="notice hidden" aria-live="polite"></div>
+</div>
+<div class="panel">
+<h2>Build pipeline</h2>
+<div class="item"><div class="item-title">01 · Validate archive</div><div class="item-meta">Checks ZIP structure and supported project entry points.</div></div>
+<div class="item"><div class="item-title">02 · Upload as input/app.zip</div><div class="item-meta">Uses GitHub's repository contents API on the configured branch.</div></div>
+<div class="item"><div class="item-title">03 · Run existing workflow</div><div class="item-meta mono">.github/workflows/apk-shell-builder.yml</div></div>
+<div class="item"><div class="item-title">04 · Retrieve artifact</div><div class="item-meta">Shows completed workflow runs and downloadable artifact archives.</div></div>
+</div>
+</section>
+<section id="tab-runs" class="hidden">
+<div class="panel">
+<div class="panel-head"><h2>Build history</h2><button id="refreshRuns">Refresh</button></div>
+<p class="muted small">Workflow runs are read directly from your GitHub repository.</p>
+<div id="runsList"><p class="muted small">Connect GitHub in Settings, then refresh.</p></div>
+</div>
+<div class="panel"><h2>Artifacts</h2><div id="artifactsList"><p class="muted small">Select a workflow run to view its artifacts.</p></div></div>
+</section>
+<section id="tab-settings" class="hidden">
+<div class="panel">
+<h2>GitHub connection</h2>
+<p class="muted small">Your token can be remembered on this device using Android Keystore-backed encryption. It is never saved in browser storage or committed to GitHub.</p>
+<div class="field"><label for="owner">Repository owner</label><input id="owner" placeholder="your-github-username-or-org" autocomplete="off"></div>
+<div class="field"><label for="repo">Repository name</label><input id="repo" placeholder="existing-repository" autocomplete="off"></div>
+<div class="field"><label for="branch">Branch</label><input id="branch" placeholder="Leave blank to use default branch" autocomplete="off"></div>
+<div class="field"><label for="token">Fine-grained personal access token</label><input id="token" type="password" placeholder="github_pat_..." autocomplete="off"></div><div class="field"><label><input id="rememberToken" type="checkbox" checked style="width:auto;margin-right:8px">Remember token securely on this device</label><div class="small muted" id="secureStoreStatus">Checking secure storage…</div></div>
+<div class="notice warn">Required token access for a private repository: repository access limited to this repository, Contents: Read and write, Actions: Read and write, and Metadata: Read. GitHub may require additional workflow permissions depending on your organization policy. Never share this token in chat.</div>
+<div class="actions"><button class="primary" id="connect">Save &amp; test connection</button><button id="disconnect">Disconnect</button><button id="deleteSavedToken">Delete saved token</button></div>
+<div id="connectionMessage" class="notice hidden" aria-live="polite"></div>
+</div>
+<div class="panel">
+<h2>Workflow compatibility</h2>
+<div class="item"><div class="item-title mono">apk-shell-builder.yml</div><div class="item-meta">The workflow must support the workflow_dispatch event for the Run button to work.</div></div>
+<div class="item"><div class="item-title">Application name and package ID</div><div class="item-meta">These values are passed to the workflow for each build.</div></div>
+<div class="item"><div class="item-title">Artifact download</div><div class="item-meta">Downloads the GitHub Actions artifact archive. The APK is contained inside that ZIP archive.</div></div>
+</div>
+</section>
+</main>
+<footer>MITOS APK SHELL · Uses your existing GitHub repository and workflow</footer>
+</div>
+<script>
+"use strict";
+const WORKFLOW=".github/workflows/apk-shell-builder.yml";
+const API="https://api.github.com";
+let selectedFile=null, zipInfo=null, pollTimer=null, lastDispatchAt=0, gh={owner:"",repo:"",branch:"",token:"",defaultBranch:""}, activeRun=null, runsCache=[];
+const $=id=>document.getElementById(id);
+function msg(id,text,kind=""){const el=$(id);el.textContent=text;el.className="notice"+(kind?" "+kind:"");el.classList.remove("hidden")}
+function hide(id){$(id).classList.add("hidden")}
+const STORE=window.MitosSecureStore||null;
+function saveRepoSettings(){try{localStorage.setItem("mitos_repo_settings",JSON.stringify({owner:$("owner").value.trim(),repo:$("repo").value.trim(),branch:$("branch").value.trim()}))}catch(e){}}
+function loadRepoSettings(){try{const x=JSON.parse(localStorage.getItem("mitos_repo_settings")||"{}");$("owner").value=x.owner||"";$("repo").value=x.repo||"";$("branch").value=x.branch||""}catch(e){}}
+async function initSecureStore(){
+  $("secureStoreStatus").textContent=STORE?"Android encrypted storage is available on this device.":"Secure Android storage is unavailable. Rebuild/install the MITOS APK updated by the new builder.";
+  loadRepoSettings();
+  if(STORE){try{const saved=STORE.getToken();if(saved){$("token").value=saved;msg("connectionMessage","A saved token was restored from encrypted device storage. Tap Save & test connection to reconnect.","ok")}}catch(e){$("secureStoreStatus").textContent="Could not read encrypted token storage: "+e.message}}
+}
+
+function setTab(name){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));["build","runs","settings"].forEach(x=>$("tab-"+x).classList.toggle("hidden",x!==name));}
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
+function headers(extra={}){return {"Accept":"application/vnd.github+json","Authorization":"Bearer "+gh.token,"X-GitHub-Api-Version":"2022-11-28",...extra}}
+async function api(path,options={}){const res=await fetch(API+path,{...options,headers:headers(options.headers||{})});let data=null;const raw=await res.text();try{data=raw?JSON.parse(raw):{}}catch{data={message:raw||res.statusText}}if(!res.ok)throw new Error(data.message||("GitHub API error "+res.status));return data}
+function repoPath(){return "/repos/"+encodeURIComponent(gh.owner)+"/"+encodeURIComponent(gh.repo)}
+async function connect(){gh.owner=$("owner").value.trim();gh.repo=$("repo").value.trim();gh.branch=$("branch").value.trim();gh.token=$("token").value.trim();if(!gh.owner||!gh.repo||!gh.token){msg("connectionMessage","Enter repository owner, repository name, and token.","error");return}
+$("connect").disabled=true;try{const r=await api(repoPath());gh.defaultBranch=r.default_branch;if(!gh.branch)gh.branch=gh.defaultBranch;$("branch").value=gh.branch;saveRepoSettings();
+if($("rememberToken").checked){if(!STORE)throw new Error("Secure token storage is unavailable. Install the MITOS APK built with the updated shell before saving a token.");if(!STORE.saveToken(gh.token))throw new Error("Android could not save the token securely. Try again.")}else if(STORE){STORE.clearToken()}
+$("connectionBadge").textContent="CONNECTED";msg("connectionMessage","Connected to "+gh.owner+"/"+gh.repo+" · default branch: "+gh.defaultBranch,"ok");await loadRuns()}catch(e){gh.token="";$("connectionBadge").textContent="NOT CONNECTED";msg("connectionMessage",e.message,"error")}finally{$("connect").disabled=false}}
+$("connect").addEventListener("click",connect);
+$("deleteSavedToken").addEventListener("click",()=>{if(STORE){STORE.clearToken()}$("token").value="";gh.token="";msg("connectionMessage","Saved token deleted from this device.","ok")});
+$("disconnect").addEventListener("click",()=>{gh={owner:"",repo:"",branch:"",token:"",defaultBranch:""};$("connectionBadge").textContent="NOT CONNECTED";msg("connectionMessage","Disconnected for this session. Your securely saved token is kept on this device.")});
+function safePath(s){return s.split("/").every(p=>p&&p!=="."&&p!=="..")&&!s.startsWith("/")&&!s.includes("\\")}
+function inspectZip(buf){const v=new DataView(buf);if(v.byteLength<22||v.getUint32(0,true)!==0x04034b50)throw Error("This file does not look like a ZIP archive.");let eocd=-1;for(let i=v.byteLength-22;i>=Math.max(0,v.byteLength-65557);i--){if(v.getUint32(i,true)===0x06054b50){eocd=i;break}}if(eocd<0)throw Error("ZIP central directory is missing or archive is incomplete.");const count=v.getUint16(eocd+10,true),offset=v.getUint32(eocd+16,true);if(count===0xffff||offset===0xffffffff)throw Error("ZIP64 archives are not supported by this validator.");let p=offset,names=[];const decoder=new TextDecoder();for(let i=0;i<count;i++){if(p+46>v.byteLength||v.getUint32(p,true)!==0x02014b50)throw Error("Invalid ZIP directory entry.");const flags=v.getUint16(p+8,true),nl=v.getUint16(p+28,true),el=v.getUint16(p+30,true),cl=v.getUint16(p+32,true);if(p+46+nl+el+cl>v.byteLength)throw Error("Truncated ZIP directory.");let name=decoder.decode(new Uint8Array(buf,p+46,nl));if(flags&0x800)name=decoder.decode(new Uint8Array(buf,p+46,nl));if(name&&!name.endsWith("/")){if(!safePath(name))throw Error("Unsafe path in ZIP: "+name);names.push(name)}p+=46+nl+el+cl}const lower=names.map(x=>x.toLowerCase());const website=lower.some(x=>x==="index.html"||x==="index.htm");const gradle=lower.some(x=>x==="settings.gradle"||x==="settings.gradle.kts")&&(lower.some(x=>x==="app/build.gradle"||x==="app/build.gradle.kts"));let type=website?"Website / HTML":gradle?"Android Gradle": "Unsupported / unknown";return {count:names.length,type,website,gradle,names}}
+$("dropZone").addEventListener("click",()=> $("zipFile").click());
+$("zipFile").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;selectedFile=f;zipInfo=null;$("fileTitle").textContent=f.name;$("fileHelp").textContent=(f.size/1048576).toFixed(2)+" MB · checking archive…";$("uploadBuild").disabled=true;hide("validation");try{if(!f.name.toLowerCase().endsWith(".zip"))throw Error("Please choose a .zip file.");if(f.size>65*1024*1024)throw Error("ZIP exceeds the 65 MB safe upload limit for GitHub Contents API uploads.");zipInfo=inspectZip(await f.arrayBuffer());$("projectType").textContent=zipInfo.type.toUpperCase();$("fileHelp").textContent=f.name+" · "+zipInfo.count+" files detected";if(zipInfo.website||zipInfo.gradle){msg("validation","ZIP validation passed. Detected: "+zipInfo.type+".","ok");$("uploadBuild").disabled=false}else{msg("validation","ZIP is readable, but no supported project layout was detected. Website ZIP needs index.html or index.htm at its root. Android Gradle ZIP needs settings.gradle(.kts) and app/build.gradle(.kts) at the project root.","error")}}catch(err){msg("validation",err.message,"error");$("projectType").textContent="INVALID"}});
+$("clearFile").addEventListener("click",()=>{selectedFile=null;zipInfo=null;$("zipFile").value="";$("fileTitle").textContent="Choose project ZIP";$("fileHelp").textContent="Tap to select a .zip file from your Android device";$("projectType").textContent="NO PROJECT";$("uploadBuild").disabled=true;hide("validation")});
+function fileToBase64(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result).split(",")[1]);r.onerror=()=>reject(Error("Could not read selected ZIP."));r.readAsDataURL(file)})}
+async function uploadAndBuild(){if(!selectedFile||!zipInfo)return;if(!gh.token){msg("buildMessage","Connect your GitHub repository in Settings first.","error");return}const name="app.zip";
+const appName=$("appName").value.trim()||"MITOS";
+const packageId=$("packageId").value.trim()||"com.mitos.app";
+if(!/^[A-Za-z0-9 ._-]{1,40}$/.test(appName)){msg("buildMessage","Use a simple application name with letters, numbers, spaces, dots, underscores or hyphens.","error");return}
+if(!/^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$/.test(packageId)){msg("buildMessage","Enter a valid Android package ID, for example com.company.myapp.","error");return}
+$("uploadBuild").disabled=true;msg("buildMessage","<invalid>","");$("buildMessage").textContent="Reading ZIP for upload…";try{const content=await fileToBase64(selectedFile);const path="/contents/input/app.zip";let existing=null;try{existing=await api(repoPath()+path+"?ref="+encodeURIComponent(gh.branch))}catch(e){if(!String(e.message).includes("Not Found"))throw e}
+const body={message:"Add MITOS project ZIP: "+name,content,branch:gh.branch};if(existing&&existing.sha)body.sha=existing.sha;
+await api(repoPath()+path,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+msg("buildMessage","ZIP uploaded as input/app.zip. Starting your APK build…","ok");
+await api(repoPath()+"/actions/workflows/apk-shell-builder.yml/dispatches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ref:gh.branch,inputs:{app_name:appName,package_id:packageId}})});
+lastDispatchAt=Date.now();msg("buildMessage","GitHub accepted the build request. Build history will refresh automatically while it runs.","ok");setTab("runs");if(pollTimer)clearInterval(pollTimer);setTimeout(loadRuns,3000);pollTimer=setInterval(async()=>{await loadRuns();const latest=runsCache[0];if(latest&&new Date(latest.created_at).getTime()>=lastDispatchAt&&latest.status==="completed"){clearInterval(pollTimer);pollTimer=null}},12000);
+}catch(e){msg("buildMessage","Operation failed: "+e.message,"error")}finally{$("uploadBuild").disabled=false}}
+$("uploadBuild").addEventListener("click",uploadAndBuild);
+async function loadRuns(){if(!gh.token)return;const list=$("runsList");list.innerHTML='<p class="muted small"><span class="spinner"></span> Loading workflow runs…</p>';try{const d=await api(repoPath()+"/actions/workflows/apk-shell-builder.yml/runs?per_page=20");runsCache=d.workflow_runs||[];if(!runsCache.length){list.innerHTML='<p class="muted small">No workflow runs found yet.</p>';return}list.innerHTML=runsCache.map(r=>`<div class="item"><div class="item-row"><div class="item-title">${esc(r.display_title||r.name||"Build")}</div><span class="status ${r.conclusion==="success"?"success":r.conclusion==="failure"||r.conclusion==="cancelled"?"failure":""}">${esc(r.conclusion||r.status||"queued")}</span></div><div class="item-meta">Run #${r.run_number} · ${esc(r.head_branch||"")} · ${new Date(r.created_at).toLocaleString()}</div><div class="actions"><button data-run="${r.id}" class="viewRun">View artifacts</button><button data-log="${r.html_url}" class="openRun">Open on GitHub</button></div></div>`).join("");list.querySelectorAll(".viewRun").forEach(b=>b.addEventListener("click",()=>loadArtifacts(b.dataset.run)));list.querySelectorAll(".openRun").forEach(b=>b.addEventListener("click",()=>window.open(b.dataset.log,"_blank","noopener")))}catch(e){list.innerHTML='<p class="notice error">'+esc(e.message)+'</p>'}}
+$("refreshRuns").addEventListener("click",loadRuns);
+async function loadArtifacts(runId){activeRun=runId;const box=$("artifactsList");box.innerHTML='<p class="muted small"><span class="spinner"></span> Loading artifacts…</p>';try{const d=await api(repoPath()+"/actions/runs/"+encodeURIComponent(runId)+"/artifacts");const arts=(d.artifacts||[]).filter(a=>!a.expired);if(!arts.length){box.innerHTML='<p class="muted small">No unexpired artifacts are attached to this run yet. Check that the workflow uploaded the APK as an Actions artifact.</p>';return}box.innerHTML=arts.map(a=>`<div class="item"><div class="item-title">${esc(a.name)}</div><div class="item-meta">${(a.size_in_bytes/1048576).toFixed(2)} MB · expires ${new Date(a.expires_at).toLocaleDateString()}</div><button class="downloadArtifact" data-id="${a.id}" data-name="${esc(a.name)}">Download artifact ZIP</button></div>`).join("");box.querySelectorAll(".downloadArtifact").forEach(b=>b.addEventListener("click",()=>downloadArtifact(b.dataset.id,b.dataset.name)))}catch(e){box.innerHTML='<p class="notice error">'+esc(e.message)+'</p>'}}
+async function downloadArtifact(id,name){try{$("artifactsList").insertAdjacentHTML("afterbegin",'<p class="notice">Preparing artifact download…</p>');const res=await fetch(API+repoPath()+"/actions/artifacts/"+encodeURIComponent(id)+"/zip",{headers:headers({"Accept":"application/vnd.github+json"})});if(!res.ok)throw Error("Artifact download failed: HTTP "+res.status);const blob=await res.blob();const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=(name||"mitos-artifact")+".zip";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)}catch(e){alert(e.message)}}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+document.addEventListener("DOMContentLoaded",initSecureStore);
+</script>
+</body>
+</html>
