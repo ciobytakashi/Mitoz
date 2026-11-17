@@ -1,9 +1,16 @@
-
 name: MITOS APK Shell Builder
 
 on:
   workflow_dispatch:
     inputs:
+      build_mode:
+        description: Choose whether to build MITOS itself or the selected project ZIP
+        required: true
+        type: choice
+        options:
+          - project
+          - shell
+        default: project
       app_name:
         description: App display name
         required: false
@@ -12,13 +19,6 @@ on:
         description: Android application ID
         required: false
         default: com.mitos.app
-
-  push:
-    paths:
-      - "input/*.zip"
-      - "builder.json"
-      - "scripts/build_apk.py"
-      - ".github/workflows/apk-shell-builder.yml"
 
 permissions:
   contents: read
@@ -53,8 +53,9 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Build MITOS APK
+      - name: Build Android APK
         env:
+          BUILD_MODE: ${{ inputs.build_mode || 'project' }}
           APP_NAME: ${{ inputs.app_name || 'MITOS' }}
           PACKAGE_ID: ${{ inputs.package_id || 'com.mitos.app' }}
           BUILD_ROOT: ${{ runner.temp }}/mitos-build
@@ -67,4 +68,3 @@ jobs:
           path: ${{ runner.temp }}/mitos-build/output/*.apk
           if-no-files-found: error
           retention-days: 30
-          
