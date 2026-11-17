@@ -1,0 +1,9 @@
+{
+  "app_name": "MITOS",
+  "package_id": "com.mitos.app",
+  "version_code": 1,
+  "version_name": "1.0",
+  "web_entry": "index.html",
+  "allow_file_access": true,
+  "allow_javascript": true
+}
