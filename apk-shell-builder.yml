@@ -1,0 +1,68 @@
+
+name: MITOS APK Shell Builder
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: App display name
+        required: false
+        default: MITOS
+      package_id:
+        description: Android application ID
+        required: false
+        default: com.mitos.app
+
+  push:
+    paths:
+      - "input/*.zip"
+      - "builder.json"
+      - "scripts/build_apk.py"
+      - ".github/workflows/apk-shell-builder.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Build MITOS APK
+        env:
+          APP_NAME: ${{ inputs.app_name || 'MITOS' }}
+          PACKAGE_ID: ${{ inputs.package_id || 'com.mitos.app' }}
+          BUILD_ROOT: ${{ runner.temp }}/mitos-build
+        run: python scripts/build_apk.py
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MITOS-apk
+          path: ${{ runner.temp }}/mitos-build/output/*.apk
+          if-no-files-found: error
+          retention-days: 30
+          
